@@ -1,0 +1,354 @@
+1)Implementation of lexical analyzer using c
+
+
+#include <iostream>
+#include <string>
+#include <vector>
+
+
+using namespace std;
+
+vector<string> keywords = {"int", "float", "char", "while", "do", "for", "if"};
+
+bool isKeyword(string& str) {
+    for(string s : keywords)
+        if(str == s)
+            return true;
+    return false;
+}
+
+int main() {
+    string input;
+    cout << "Enter the C program: ";
+    getline(cin, input);
+    vector<int> constants;
+    vector<string> identifiers;
+    vector<char> operators, specialChars;
+    string token;
+    
+    for (int i = 0; i < input.length(); ++i) {
+        char c = input[i];
+
+        if (isdigit(c)) {
+            int value = c - '0';
+            while (i + 1 < input.length() && isdigit(input[i + 1])) {
+                value = value * 10 + (input[++i] - '0');
+            }
+            constants.push_back(value);
+        }
+       
+        else if (isalpha(c)) {
+            token.clear();
+            token += c;
+            while (i + 1 < input.length() && (isalnum(input[i + 1]) || input[i + 1] == '_' || input[i + 1] == '$')) {
+                token += input[++i];
+            }
+            if (isKeyword(token)) {
+                cout << token << " is a keyword" << endl;
+            } else {
+                identifiers.push_back(token);
+            }
+        }
+        
+        else if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '&' || 
+                 c == '|' || c == '^' || c == '<' || c == '>' || c == '=') {
+            operators.push_back(c);
+        }
+
+        else if (!isspace(c) && !isalnum(c)) {
+            specialChars.push_back(c);
+        }
+    }
+    cout << "\nConstants: ";
+    for (int num : constants) {
+        cout << num << " ";
+    }
+    cout << endl;
+
+    cout << "Identifiers: ";
+    for (const string& id : identifiers) {
+        cout << id << " ";
+    }
+    cout << endl;
+
+    cout << "Operators: ";
+    for (char op : operators) {
+        cout << op << " ";
+    }
+    cout << endl;
+
+    cout << "Special characters: ";
+    for (char sp : specialChars) {
+        cout << sp << " ";
+    }
+    cout << endl;
+
+    return 0;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+
+2)Implementation of symbol table
+
+#include <stdio.h>
+#include <string.h>
+
+struct symtab {
+    int lineno;
+    char var[25], dt[25], val[10];
+} sa[20];
+
+void main() {
+    int i = 0, max = 0, line = 0;
+    char s[25], typ[25], gar[] = "garbage";
+
+    // Static input as a list of strings to simulate file content
+    const char *input[] = {
+    "int", "a", ",", "b", "=", "5", ";",
+    "float", "c", ";",
+    "char", "d", "=", "a", ";",
+    NULL // End of input
+};
+
+
+    int idx = 0;
+    printf("\n\nSYMBOL TABLE MANAGEMENT\n\n");
+    printf("Variable\tDatatype\tLine.no.\t\tValue\n");
+
+    while (input[idx] != NULL) {
+        strcpy(s, input[idx++]);
+
+        if ((strcmp(s, "int") == 0) || (strcmp(s, "float") == 0) || (strcmp(s, "char") == 0)) {
+            strcpy(typ, s);
+            line++;
+
+            while (strcmp(s, ";") != 0)
+         {
+                i++;
+                max = i;
+                sa[i].lineno = line;
+
+                strcpy(s, input[idx++]);
+                strcpy(sa[i].var, s);
+                strcpy(sa[i].dt, typ);
+
+                strcpy(s, input[idx++]);
+
+                if (strcmp(s, "=") == 0) {
+                    strcpy(s, input[idx++]);
+                    strcpy(sa[i].val, s);
+                    strcpy(s, input[idx++]);
+                } else {
+                    strcpy(sa[i].val, gar);
+                }
+
+                if (strcmp(s, ",") == 0) {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    for (i = 1; i <= max; i++) {
+        printf("\n%s\t\t%s\t\t%d\t\t%s\n", sa[i].var, sa[i].dt, sa[i].lineno, sa[i].val);
+    }
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+
+3)Implementation of front end of compiler
+
+
+#include <iostream>
+#include <stack>
+using namespace std;
+int level(char ch){
+    if(ch == '/' or ch == '*')
+        return 2;
+    if(ch == '+' or ch == '-')
+        return 1;
+    return 0;
+}
+int temp = 0;
+int main(){
+    string inp;
+    getline(cin, inp);
+    int eqI = 0;
+    while(inp[eqI] != '=')
+        eqI++;
+    string str = inp.substr(eqI + 1);
+    int n = str.length();
+    stack<char> ops;
+    stack<string> vals;
+    for(int i = 0 ; i < n ; i++){
+        if(isdigit(str[i]) or isalpha(str[i])){
+            string elem = "";
+            while(i < n && (isdigit(str[i]) or isalpha(str[i]))){
+                elem += str[i];
+                i++;
+            }
+            vals.push(elem);
+            i--;
+        }
+        else if(str[i] == '(')
+            ops.push('(');
+        else if(str[i] == ')'){
+            while(ops.top() != '('){
+                string e2 = vals.top(); vals.pop();
+                string e1 = vals.top(); vals.pop();
+                cout << "t" << temp << " = " << e1 << " " << ops.top() << " " << e2 << "\n";
+                ops.pop();
+                vals.push("t" + to_string(temp));
+                temp++;
+            }
+            ops.pop();
+        }
+        else{
+            while(!ops.empty() && level(ops.top()) >= level(str[i])){
+                string e2 = vals.top(); vals.pop();
+                string e1 = vals.top(); vals.pop();
+                cout << "t" << temp << " = " << e1 << " " << ops.top() << " " << e2 << "\n";
+                ops.pop();
+                vals.push("t" + to_string(temp));
+                temp++;
+            }
+            ops.push(str[i]);
+        }
+    }
+    while(!ops.empty()){
+        string e2 = vals.top(); vals.pop();
+        string e1 = vals.top(); vals.pop();
+        cout << "t" << temp << " = " << e1 << " " << ops.top() << " " << e2 << "\n";
+        ops.pop();
+        vals.push("t" + to_string(temp));
+        temp++;
+    }
+    cout << inp.substr(0, eqI) <<" = t" << temp - 1;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+4)Implementation of back end of compiler
+
+
+#include <iostream>
+using namespace std;
+int main() {
+    string a, mov = "MOVF", mul = "MULF", div = "DIVF", add = "ADDF", sub = "SUBF";
+    int i = 0, j = 0, len = 0, s = 0, r = 1;
+    cout << "\nEnter the code: ";
+    getline(cin, a);
+    len = a.length();
+    for (i = 0; i < len; i++)
+        if (a[i] == '='){
+            for (j = i; j < len; j++)
+                if (a[j] == 'i')
+                    cout << "\n" << mov << " " << a[j] << a[j + 1] << a[j + 2] << ",R" << r++;
+        }
+        else if (isdigit(a[i]) and isdigit(a[i + 1]))
+                cout << "\n" << mov << " #" << a[i] << a[i + 1] << ",R" << r++;
+        
+    for (i = len - 1; i >= 0; i--) {
+        if(a[i] == '+' or a[i] == '-' or a[i] == '*' or a[i] == '/'){
+            s = a[i - 1] - 1;
+            if (a[i] == '+')
+                cout << "\n" << add << " ";
+            else if (a[i] == '-')
+                cout << "\n" << sub << " ";
+            else if (a[i] == '*')
+                cout << "\n" << mul << " ";
+            else if (a[i] == '/')
+                cout << "\n" << div << " ";
+                
+            if (a[i + 1] == 'i')
+                cout << "R" << char(s) << ",R" << char(a[i + 3] - 1);
+            else
+                cout << "R" << char(s) << ",R" << r - 1;
+            r--;
+        }
+    }
+    cout << "\n" << mov << " R1,id1";
+    return 0;
+}
+
+
+//////////////////////////////////////////////////////////////////
+
+5) implementation of code optimizer
+
+#include <iostream>
+#include <string>
+using namespace std;
+
+struct Operation {
+    char l;
+    string r;
+}op[10], pr[10];
+
+int main() {
+    int a, i, k, j, n, z = 0, m, q;
+    string tem, temp;
+    cout << "\nEnter the number of values: ";
+    cin >> n;
+    for (i = 0; i < n; i++) {
+        cout << "\nLeft: ";
+        cin >> op[i].l;
+        cout << "Right: ";
+        cin >> op[i].r;
+    }
+    cout << "\nIntermediate code\n";
+    for (i = 0; i < n; i++)
+        cout << op[i].l << " = " << op[i].r << endl;
+    for (i = 0; i < n; i++) {
+        temp = op[i].l;
+        for (j = 0; j < n; j++) {
+            if (op[j].r.find(temp) != string::npos) {
+                pr[z].l = op[i].l;
+                pr[z].r = op[i].r;
+                z++;
+                break;
+            }
+        }
+    }
+    cout << "\nAfter dead code elimination\n";
+    for (k = 0; k < z; k++)
+        cout << pr[k].l << " = " << pr[k].r << endl;
+    for (m = 0; m < z; m++) {
+        tem = pr[m].r;
+        for (j = m + 1; j < z; j++) {
+            if (tem.find(pr[j].r) != string::npos) {
+                pr[j].l = pr[m].l;
+                for (i = 0; i < z; i++) {
+                    size_t pos = pr[i].r.find(pr[j].l);
+                    if (pos != string::npos) {
+                        pr[i].r[pos] = pr[m].l;
+                    }
+                }
+            }
+        }
+    }
+    cout << "\nEliminate common expressions\n";
+    for (i = 0; i < z; i++)
+        cout << pr[i].l << " = " << pr[i].r << endl;
+
+    for (i = 0; i < z; i++) {
+        for (j = i + 1; j < z; j++) {
+            if ((pr[i].l == pr[j].l) && (pr[i].r == pr[j].r)) {
+                pr[i].l = '\0';
+                pr[i].r = "";
+            }
+        }
+    }
+    cout << "\nOptimized code\n";
+    for (i = 0; i < z; i++) {
+        if (pr[i].l != '\0')
+            cout << pr[i].l << " = " << pr[i].r << endl;
+    }
+
+    return 0;
+}
